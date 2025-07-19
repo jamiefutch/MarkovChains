@@ -12,7 +12,7 @@
         <PackageProjectUrl>https://github.com/jamiefutch/MarkovChains</PackageProjectUrl>
         <PackageLicenseUrl>https://github.com/jamiefutch/MarkovChains/blob/main/LICENSE</PackageLicenseUrl>
         <RepositoryUrl>https://github.com/jamiefutch/MarkovChains</RepositoryUrl>
-        <RepositoryType>Git</RepositoryType>
+        <RepositoryType>Git</RepositoryType>        
         <PackageTags>C#, MarkovChains</PackageTags>
     </PropertyGroup>
 
