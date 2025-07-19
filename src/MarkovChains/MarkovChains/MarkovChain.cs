@@ -8,7 +8,7 @@ namespace MarkovChains;
 /// <summary>
 /// Markov chain implementation using n-grams.
 /// </summary>
-public class MarkovChainNGram : IMarkovChain, IDisposable
+public class MarkovChainNGram : IDisposable, IMarkovChain, IMarkovChainFiles
 {
     private static int _chainCapacity; // = 4_000_000; // Initial capacity for the chain dictionary
     private readonly int _order;
@@ -47,11 +47,20 @@ public class MarkovChainNGram : IMarkovChain, IDisposable
             var key = string.Join(" ", words.Skip(i).Take(_order));
             var next = words[i + _order];
 
-            if (!_chain.ContainsKey(key))
+            if (_chain != null && !_chain.ContainsKey(key))
                 _chain[key] = new List<string>();
 
-            _chain[key].Add(next);
+            if (_chain != null) _chain[key].Add(next);
         }
+    }
+    
+    /// <summary>
+    /// Trains the Markov chain on many lines of text.
+    /// </summary>
+    public void Train(IEnumerable<string> lines)
+    {
+        foreach (var line in lines)
+            Train(line);
     }
     
 
@@ -64,25 +73,29 @@ public class MarkovChainNGram : IMarkovChain, IDisposable
         if (_chain != null && _chain.Count == 0)
             throw new InvalidOperationException("The Markov chain is empty. Train it first.");
 
-        string current = start ?? _chain.Keys.ElementAt(_random.Next(_chain.Count));
-        var result = new List<string>(current.Split(' '));
-
-        for (int i = 0; i < maxWords - _order; i++)
+        if (_chain != null)
         {
-            if (!_chain.ContainsKey(current) || _chain[current].Count == 0)
-                break;
+            string current = start ?? _chain.Keys.ElementAt(_random.Next(_chain.Count));
+            var result = new List<string>(current.Split(' '));
 
-            string next = _chain[current][_random.Next(_chain[current].Count)];
-            if (next == _terminator)
-                break;
+            for (int i = 0; i < maxWords - _order; i++)
+            {
+                if (!_chain.ContainsKey(current) || _chain[current].Count == 0)
+                    break;
 
-            result.Add(next);
+                string next = _chain[current][_random.Next(_chain[current].Count)];
+                if (next == _terminator)
+                    break;
 
-            // Build next n-gram key
-            current = string.Join(" ", result.Skip(result.Count - _order).Take(_order));
+                result.Add(next);
+
+                // Build next n-gram key
+                current = string.Join(" ", result.Skip(result.Count - _order).Take(_order));
+            }
+
+            return string.Join(" ", result);
         }
-
-        return string.Join(" ", result);
+        throw new InvalidOperationException("The Markov chain is not initialized.");
     }
 
     /// <summary>
@@ -110,7 +123,7 @@ public class MarkovChainNGram : IMarkovChain, IDisposable
     /// </summary>
     public void TrimChain()
     {
-        _chain.TrimExcess();
+        _chain?.TrimExcess();
     }
 
     /// <summary>

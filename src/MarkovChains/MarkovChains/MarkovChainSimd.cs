@@ -6,7 +6,7 @@ namespace MarkovChains;
 /// <summary>
 /// Simd-based Markov chain implementation.
 /// </summary>
-public class MarkovChainSimd : IDisposable, IMarkovChain
+public class MarkovChainSimd : IDisposable, IMarkovChain, IMarkovChainFiles
 {
     private static int _chainCapacity; // Initial capacity for the chain dictionary
     private readonly int _order;
@@ -34,17 +34,19 @@ public class MarkovChainSimd : IDisposable, IMarkovChain
     {
         // Remove punctuation/symbols, lower case, and split
         string cleaned = Regex.Replace(text, @"[^\w\s]", "");
-        var words = cleaned.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        string?[] words = cleaned.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
         if (words.Length < _order)
             return;
         for (int i = 0; i <= words.Length - _order; i++)
         {
             string key = string.Join(" ", words.Skip(i).Take(_order));
-            string next = (i + _order < words.Length) ? words[i + _order] : null;
-            if (!_chain.ContainsKey(key))
+            string? next = (i + _order < words.Length) ? words[i + _order] : null;
+            
+            if (_chain != null && !_chain.ContainsKey(key))
                 _chain[key] = new List<string>();
+            
             if (next != null)
-                _chain[key].Add(next);
+                _chain?[key].Add(next);
         }
     }
 
@@ -69,19 +71,19 @@ public class MarkovChainSimd : IDisposable, IMarkovChain
         if (!string.IsNullOrWhiteSpace(start))
         {
             var startClean = Regex.Replace(start, @"[^\w\s]", "").ToLower();
-            current = _chain.Keys.FirstOrDefault(k => k.StartsWith(startClean));
+            current = _chain?.Keys.FirstOrDefault(k => k.StartsWith(startClean));
             if (current == null)
-                current = _chain.Keys.ElementAt(_random.Next(_chain.Count));
+                current = _chain?.Keys.ElementAt(_random.Next(_chain.Count));
         }
         else
         {
-            current = _chain.Keys.ElementAt(_random.Next(_chain.Count));
+            current = _chain?.Keys.ElementAt(_random.Next(_chain.Count));
         }
 
-        var result = new List<string>(current.Split(' '));
+        var result = new List<string>(current?.Split(' '));
         for (int i = 0; i < maxWords - _order; i++)
         {
-            if (!_chain.ContainsKey(current) || _chain[current].Count == 0)
+            if (_chain != null && (!_chain.ContainsKey(current) || _chain[current].Count == 0))
                 break;
             var next = _chain[current][_random.Next(_chain[current].Count)];
             result.Add(next);
