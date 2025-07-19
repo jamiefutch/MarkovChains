@@ -1,0 +1,124 @@
+﻿using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Collections.Generic;
+
+namespace MarkovChains;
+
+/// <summary>
+/// Markov chain implementation using n-grams.
+/// </summary>
+public class MarkovChainNGram : IMarkovChain, IDisposable
+{
+    private static int _chainCapacity; // = 4_000_000; // Initial capacity for the chain dictionary
+    private readonly int _order;
+    private Dictionary<string, List<string>>? _chain = new Dictionary<string, List<string>>(_chainCapacity);
+    private readonly Random _random = new Random();
+    private readonly string _terminator = "<END>";
+
+    /// <summary>
+    /// markovChainNGram constructor.
+    /// </summary>
+    public MarkovChainNGram(int order, int chainCapacity)
+    {
+        if (order < 1)
+            throw new ArgumentException("Order must be at least 1.");
+        _order = order;
+        
+        if (chainCapacity < 1)
+            throw new ArgumentException("Chain capacity must be at least 1.");
+        _chainCapacity = chainCapacity;
+    }
+
+    /// <summary>
+    /// Builds the Markov chain from input text (split by whitespace). 
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Train(string text)
+    {
+        string cleaned = Regex.Replace(text, @"[^\w\s]", ""); // keeps letters, numbers, whitespace
+        var words = cleaned.Split([' ', '\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries).ToList();
+        //var words = text.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+        words.Add(_terminator); // End token
+
+        for (int i = 0; i < words.Count - _order; i++)
+        {
+            // Build n-gram key
+            var key = string.Join(" ", words.Skip(i).Take(_order));
+            var next = words[i + _order];
+
+            if (!_chain.ContainsKey(key))
+                _chain[key] = new List<string>();
+
+            _chain[key].Add(next);
+        }
+    }
+    
+
+    /// <summary>
+    /// Generates text starting from a given n-gram (or random if null) and up to maxWords.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public string Generate(string? start = null, int maxWords = 100)
+    {
+        if (_chain != null && _chain.Count == 0)
+            throw new InvalidOperationException("The Markov chain is empty. Train it first.");
+
+        string current = start ?? _chain.Keys.ElementAt(_random.Next(_chain.Count));
+        var result = new List<string>(current.Split(' '));
+
+        for (int i = 0; i < maxWords - _order; i++)
+        {
+            if (!_chain.ContainsKey(current) || _chain[current].Count == 0)
+                break;
+
+            string next = _chain[current][_random.Next(_chain[current].Count)];
+            if (next == _terminator)
+                break;
+
+            result.Add(next);
+
+            // Build next n-gram key
+            current = string.Join(" ", result.Skip(result.Count - _order).Take(_order));
+        }
+
+        return string.Join(" ", result);
+    }
+
+    /// <summary>
+    /// Saves the Markov chain to a file in JSON format.
+    /// </summary>
+    public void SaveToFile(string filePath)
+    {
+        File.WriteAllText(filePath, JsonSerializer.Serialize(_chain));
+    }
+    
+    /// <summary>
+    /// Loads the Markov chain from a file in JSON format.
+    /// </summary>
+    public void LoadFromFile(string filePath)
+    {
+        if (!File.Exists(filePath))
+            throw new FileNotFoundException($"File not found: {filePath}");
+
+        _chain = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(
+            File.ReadAllText(filePath));
+    }
+    
+    /// <summary>
+    /// Trims the internal dictionary to remove excess capacity.
+    /// </summary>
+    public void TrimChain()
+    {
+        _chain.TrimExcess();
+    }
+
+    /// <summary>
+    /// Disposes of the Markov chain resources.
+    /// </summary>
+    public void Dispose()
+    {
+        _chain?.Clear();
+        _chain = null;
+    }
+}

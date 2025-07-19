@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Title>MarkovChains</Title>
+        <Authors>Jamie Futch     </Authors>
+        <Description>Simple Markov Chain Tools       </Description>
+        <Copyright>2025, Jamie Futch   </Copyright>
+        <PackageProjectUrl>https://github.com/jamiefutch/MarkovChains</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/jamiefutch/MarkovChains/blob/main/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/jamiefutch/MarkovChains</RepositoryUrl>
+        <RepositoryType>Git</RepositoryType>
+        <PackageTags>C#, MarkovChains</PackageTags>
+    </PropertyGroup>
+
+</Project>
