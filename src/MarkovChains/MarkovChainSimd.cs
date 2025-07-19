@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Data.SQLite;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace MarkovChains;
@@ -12,6 +13,7 @@ public class MarkovChainSimd : IDisposable, IMarkovChain, IMarkovChainFiles
     private readonly int _order;
     private Dictionary<string, List<string>>? _chain = new Dictionary<string, List<string>>(_chainCapacity);
     private readonly Random _random = new Random();
+    private readonly SQLiteConnection _conn;
 
     /// <summary>
     /// markovChainSimd constructor.
