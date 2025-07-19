@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkovChains", "MarkovChains\MarkovChains.csproj", "{62F3E2EF-E01C-4184-AD50-281E312E7B4B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarkovChains.Tests", "MarkovChains.Tests\MarkovChains.Tests.csproj", "{8D02042B-91F0-4BD0-BC58-98612868D8C7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{62F3E2EF-E01C-4184-AD50-281E312E7B4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{62F3E2EF-E01C-4184-AD50-281E312E7B4B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{62F3E2EF-E01C-4184-AD50-281E312E7B4B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D02042B-91F0-4BD0-BC58-98612868D8C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D02042B-91F0-4BD0-BC58-98612868D8C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D02042B-91F0-4BD0-BC58-98612868D8C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D02042B-91F0-4BD0-BC58-98612868D8C7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
