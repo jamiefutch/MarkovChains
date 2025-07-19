@@ -25,16 +25,15 @@ public class MarkovChainSqliteAdvancedTests
     }
 
     [Fact]
-    public void Train_ShortInput_DoesNotThrow()
+    public void Train_ShortInput_ThrowsOnGenerate()
     {
         var dbPath = GetTempDbPath();
         try
         {
             using var markov = new MarkovChainSqlite(dbPath, 3);
             markov.Train("short words rock");
-            // Should not throw or insert anything
-            var output = markov.Generate(maxWords: 5);
-            Assert.False(string.IsNullOrWhiteSpace(output));
+            var ex = Assert.Throws<InvalidOperationException>(() => markov.Generate(maxWords: 5));
+            Assert.Equal("The Markov chain is empty.", ex.Message);
         }
         finally
         {

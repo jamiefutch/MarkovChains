@@ -64,6 +64,9 @@ public class MarkovChainSqlite : IDisposable
             using var cmd = new SQLiteCommand("SELECT gram FROM ngrams ORDER BY RANDOM() LIMIT 1;", _conn);
             currentGram = (string)cmd.ExecuteScalar();
         }
+        
+        if (currentGram == null) throw new InvalidOperationException("The Markov chain is empty.");
+        
         var result = new List<string>(currentGram.Split(' '));
         for (int i = 0; i < maxWords - _order; i++)
         {
