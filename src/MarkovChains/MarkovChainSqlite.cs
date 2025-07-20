@@ -14,6 +14,13 @@ public class MarkovChainSqlite : IDisposable
         bool create = !File.Exists(dbPath);
         _conn = new SQLiteConnection($"Data Source={dbPath};Version=3;");
         _conn.Open();
+        
+        using (var walCmd = new SQLiteCommand("PRAGMA cache_size=100000;", _conn))
+            walCmd.ExecuteNonQuery();
+        
+        using (var walCmd = new SQLiteCommand("PRAGMA journal_mode=WAL;", _conn))
+            walCmd.ExecuteNonQuery();
+        
         if (create)
         {
             using var cmd = new SQLiteCommand(@"
@@ -37,11 +44,9 @@ public class MarkovChainSqlite : IDisposable
         for (int i = 0; i <= words.Length - _order; i++)
         {
             string gram = string.Join(" ", words.Skip(i).Take(_order));
-            string next = (i + _order < words.Length) ? words[i + _order] : null;
+            string? next = (i + _order < words.Length) ? words[i + _order] : null;
             if (next == null) continue;
-            using var cmd = new SQLiteCommand(@"
-                INSERT INTO ngrams (gram, next, count) VALUES (@gram, @next, 1)
-                ON CONFLICT(gram, next) DO UPDATE SET count = count + 1;", _conn, tx);
+            using var cmd = new SQLiteCommand(@"INSERT INTO ngrams (gram, next, count) VALUES (@gram, @next, 1) ON CONFLICT(gram, next) DO UPDATE SET count = count + 1;", _conn, tx);
             cmd.Parameters.AddWithValue("@gram", gram);
             cmd.Parameters.AddWithValue("@next", next);
             cmd.ExecuteNonQuery();
@@ -55,10 +60,10 @@ public class MarkovChainSqlite : IDisposable
             Train(line);
     }
 
-    public string Generate(string start = null, int maxWords = 50)
+    public string Generate(string? start = null, int maxWords = 50)
     {
         var rnd = new Random();
-        string currentGram = start;
+        string? currentGram = start;
         if (string.IsNullOrWhiteSpace(currentGram))
         {
             using var cmd = new SQLiteCommand("SELECT gram FROM ngrams ORDER BY RANDOM() LIMIT 1;", _conn);

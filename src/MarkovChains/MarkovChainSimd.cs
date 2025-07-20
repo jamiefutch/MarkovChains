@@ -13,12 +13,13 @@ public class MarkovChainSimd : IDisposable, IMarkovChain, IMarkovChainFiles
     private readonly int _order;
     private Dictionary<string, List<string>>? _chain = new Dictionary<string, List<string>>(_chainCapacity);
     private readonly Random _random = new Random();
-    private readonly SQLiteConnection _conn;
 
     /// <summary>
     /// markovChainSimd constructor.
     /// </summary>
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
     public MarkovChainSimd(int order, int chainCapacity)
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
     {
         if (order < 1) throw new ArgumentException("Order must be >= 1");
         _order = order;
@@ -69,7 +70,7 @@ public class MarkovChainSimd : IDisposable, IMarkovChain, IMarkovChainFiles
         if (_chain != null && _chain.Count == 0)
             throw new InvalidOperationException("The Markov chain is empty. Train it first.");
 
-        string current;
+        string? current;
         if (!string.IsNullOrWhiteSpace(start))
         {
             var startClean = Regex.Replace(start, @"[^\w\s]", "").ToLower();
