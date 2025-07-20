@@ -36,9 +36,7 @@ public class MarkovChainNGram : IDisposable, IMarkovChain, IMarkovChainFiles
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Train(string text)
     {
-        string cleaned = Regex.Replace(text, @"[^\w\s]", ""); // keeps letters, numbers, whitespace
-        var words = cleaned.Split([' ', '\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries).ToList();
-        //var words = text.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+        var words = Utilities.CleanAndSplitToList(text);
         words.Add(_terminator); // End token
 
         for (int i = 0; i < words.Count - _order; i++)
@@ -62,7 +60,6 @@ public class MarkovChainNGram : IDisposable, IMarkovChain, IMarkovChainFiles
         foreach (var line in lines)
             Train(line);
     }
-    
 
     /// <summary>
     /// Generates text starting from a given n-gram (or random if null) and up to maxWords.

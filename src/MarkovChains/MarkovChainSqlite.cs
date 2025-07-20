@@ -1,29 +1,58 @@
 ﻿using System.Data.SQLite;
+using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace MarkovChains;
 
+/// <summary>
+/// Markov chain implementation using SQLite.
+/// </summary>
 public class MarkovChainSqlite : IDisposable
 {
     private readonly int _order;
     private readonly SQLiteConnection _conn;
 
-    public MarkovChainSqlite(string dbPath, int order)
+    /// <summary>
+    /// MarkovChainSqlite constructor.
+    /// </summary>
+    /// <param name="dbPath">path to sqlite db</param>
+    /// <param name="order">N-Gram size</param>
+    /// <param name="loadIntoMemory">load db into memory?</param>
+    public MarkovChainSqlite(string dbPath, int order, bool loadIntoMemory = false)
     {
         _order = order;
-        bool create = !File.Exists(dbPath);
-        _conn = new SQLiteConnection($"Data Source={dbPath};Version=3;");
-        _conn.Open();
-        
-        using (var walCmd = new SQLiteCommand("PRAGMA cache_size=100000;", _conn))
-            walCmd.ExecuteNonQuery();
-        
-        using (var walCmd = new SQLiteCommand("PRAGMA journal_mode=WAL;", _conn))
-            walCmd.ExecuteNonQuery();
-        
-        if (create)
+        SQLiteConnection conn;
+
+        if (loadIntoMemory)
         {
-            using var cmd = new SQLiteCommand(@"
+            // Open file DB
+            using var fileConn = new SQLiteConnection($"Data Source={dbPath};Version=3;");
+            fileConn.Open();
+
+            // Open memory DB
+            conn = new SQLiteConnection("Data Source=:memory:;Version=3;");
+            conn.Open();
+
+            // Copy file DB into memory DB
+            fileConn.BackupDatabase(conn, "main", "main", -1, null, 0);
+            _conn = conn;
+        }
+        else
+        {
+            bool create = !File.Exists(dbPath);
+            conn = new SQLiteConnection($"Data Source={dbPath};Version=3;");
+            conn.Open();
+            _conn = conn;
+
+            using (var cacheCmd = new SQLiteCommand("PRAGMA cache_size=100000;", _conn))
+                cacheCmd.ExecuteNonQuery();
+            using (var walCmd = new SQLiteCommand("PRAGMA journal_mode=WAL;", _conn))
+                walCmd.ExecuteNonQuery();
+
+            if (create)
+            {
+                using var cmd = new SQLiteCommand(@"
                 CREATE TABLE ngrams (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     gram TEXT,
@@ -31,35 +60,70 @@ public class MarkovChainSqlite : IDisposable
                     count INTEGER,
                     UNIQUE(gram, next)
                 );", _conn);
-            cmd.ExecuteNonQuery();
+                cmd.ExecuteNonQuery();
+            }
         }
     }
 
+    /// <summary>
+    /// trains the Markov chain on a single line of text.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Train(string text)
     {
-        var words = Regex.Replace(text, @"[^\w\s]", "")
-                         .Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        var words = Utilities.CleanAndSplit(text);
+        
         if (words.Length < _order + 1) return;
+        var s = new StringBuilder();
+        
         using var tx = _conn.BeginTransaction();
+        using var cmd = new SQLiteCommand(@"INSERT INTO ngrams (gram, next, count) VALUES (@gram, @next, 1) ON CONFLICT(gram, next) DO UPDATE SET count = count + 1;", _conn, tx);
+        
+        var gramParam = cmd.Parameters.Add("@gram", System.Data.DbType.String);
+        var nextParam = cmd.Parameters.Add("@next", System.Data.DbType.String);
+        
         for (int i = 0; i <= words.Length - _order; i++)
         {
-            string gram = string.Join(" ", words.Skip(i).Take(_order));
+            //string gram = string.Join(" ", words.Skip(i).Take(_order));
+            s.Clear();
+            s.Append(words[i]);
+            for (int j = 1; j < _order; j++)
+            {
+                s.Append(' ');
+                s.Append(words[i + j]);
+            }
+            string gram = s.ToString();
+            
             string? next = (i + _order < words.Length) ? words[i + _order] : null;
             if (next == null) continue;
-            using var cmd = new SQLiteCommand(@"INSERT INTO ngrams (gram, next, count) VALUES (@gram, @next, 1) ON CONFLICT(gram, next) DO UPDATE SET count = count + 1;", _conn, tx);
-            cmd.Parameters.AddWithValue("@gram", gram);
-            cmd.Parameters.AddWithValue("@next", next);
+            
+            gramParam.Value = gram;
+            nextParam.Value = next;
             cmd.ExecuteNonQuery();
         }
         tx.Commit();
     }
 
+    
+    /// <summary>
+    /// Trains the Markov chain on many lines of text.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Train(IEnumerable<string> lines)
     {
         foreach (var line in lines)
             Train(line);
     }
 
+    
+    /// <summary>
+    /// generates text using the trained Markov chain.
+    /// </summary>
+    /// <param name="start"></param>
+    /// <param name="maxWords"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public string Generate(string? start = null, int maxWords = 50)
     {
         var rnd = new Random();
@@ -101,8 +165,17 @@ public class MarkovChainSqlite : IDisposable
         }
         return string.Join(" ", result);
     }
+    
+    
 
+    /// <summary>
+    /// Closes the SQLite connection.
+    /// </summary>
     public void Close() => _conn.Close();
+    
+    /// <summary>
+    /// Disposes the MarkovChainSqlite instance, closing the connection.
+    /// </summary>
     public void Dispose()
     {
         _conn.Close();

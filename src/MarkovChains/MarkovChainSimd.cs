@@ -1,6 +1,7 @@
 ﻿using System.Data.SQLite;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
 
 namespace MarkovChains;
 
@@ -36,8 +37,8 @@ public class MarkovChainSimd : IDisposable, IMarkovChain, IMarkovChainFiles
     public void Train(string text)
     {
         // Remove punctuation/symbols, lower case, and split
-        string cleaned = Regex.Replace(text, @"[^\w\s]", "");
-        string?[] words = cleaned.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        var words = Utilities.CleanAndSplit(text);
+        
         if (words.Length < _order)
             return;
         for (int i = 0; i <= words.Length - _order; i++)
@@ -83,7 +84,7 @@ public class MarkovChainSimd : IDisposable, IMarkovChain, IMarkovChainFiles
             current = _chain?.Keys.ElementAt(_random.Next(_chain.Count));
         }
 
-        var result = new List<string>(current?.Split(' '));
+        var result = new List<string>(current.Split(' '));
         for (int i = 0; i < maxWords - _order; i++)
         {
             if (_chain != null && (!_chain.ContainsKey(current) || _chain[current].Count == 0))
