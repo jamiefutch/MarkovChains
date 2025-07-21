@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using System.Text;
 
 namespace MarkovChains;
 
@@ -39,10 +40,18 @@ public class MarkovChainNGram : IDisposable, IMarkovChain, IMarkovChainFiles
         var words = Utilities.CleanAndSplitToList(text);
         words.Add(_terminator); // End token
 
+        StringBuilder s = new StringBuilder();
         for (int i = 0; i < words.Count - _order; i++)
         {
+            s.Clear();
+            s.Append(words[i]);
+            for (int j = 1; j < _order; j++)
+            {
+                s.Append(' ');
+                s.Append(words[i + j]);
+            }
             // Build n-gram key
-            var key = string.Join(" ", words.Skip(i).Take(_order));
+            var key = s.ToString();
             var next = words[i + _order];
 
             if (_chain != null && !_chain.ContainsKey(key))

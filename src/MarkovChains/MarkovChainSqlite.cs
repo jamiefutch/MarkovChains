@@ -12,6 +12,7 @@ public class MarkovChainSqlite : IDisposable
 {
     private readonly int _order;
     private readonly SQLiteConnection _conn;
+    private const int SqlLiteCacheSize = 1_000_000; // Default cache size
 
     /// <summary>
     /// MarkovChainSqlite constructor.
@@ -45,7 +46,7 @@ public class MarkovChainSqlite : IDisposable
             conn.Open();
             _conn = conn;
 
-            using (var cacheCmd = new SQLiteCommand("PRAGMA cache_size=100000;", _conn))
+            using (var cacheCmd = new SQLiteCommand($"PRAGMA cache_size={SqlLiteCacheSize};", _conn))
                 cacheCmd.ExecuteNonQuery();
             using (var walCmd = new SQLiteCommand("PRAGMA journal_mode=WAL;", _conn))
                 walCmd.ExecuteNonQuery();
@@ -82,9 +83,8 @@ public class MarkovChainSqlite : IDisposable
         var gramParam = cmd.Parameters.Add("@gram", System.Data.DbType.String);
         var nextParam = cmd.Parameters.Add("@next", System.Data.DbType.String);
         
-        for (int i = 0; i <= words.Length - _order; i++)
+        for (int i = 0; i < words.Length - _order; i++)
         {
-            //string gram = string.Join(" ", words.Skip(i).Take(_order));
             s.Clear();
             s.Append(words[i]);
             for (int j = 1; j < _order; j++)
@@ -94,8 +94,7 @@ public class MarkovChainSqlite : IDisposable
             }
             string gram = s.ToString();
             
-            string? next = (i + _order < words.Length) ? words[i + _order] : null;
-            if (next == null) continue;
+            string next = words[i + _order];
             
             gramParam.Value = gram;
             nextParam.Value = next;

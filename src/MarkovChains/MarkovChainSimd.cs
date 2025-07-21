@@ -1,4 +1,5 @@
 ﻿using System.Data.SQLite;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
@@ -41,9 +42,19 @@ public class MarkovChainSimd : IDisposable, IMarkovChain, IMarkovChainFiles
         
         if (words.Length < _order)
             return;
+        
+        StringBuilder s = new StringBuilder();
         for (int i = 0; i <= words.Length - _order; i++)
         {
-            string key = string.Join(" ", words.Skip(i).Take(_order));
+            s.Clear();
+            s.Append(words[i]);
+            for (int j = 1; j < _order; j++)
+            {
+                s.Append(' ');
+                s.Append(words[i + j]);
+            }
+            // Build n-gram key
+            var key = s.ToString();
             string? next = (i + _order < words.Length) ? words[i + _order] : null;
             
             if (_chain != null && !_chain.ContainsKey(key))
