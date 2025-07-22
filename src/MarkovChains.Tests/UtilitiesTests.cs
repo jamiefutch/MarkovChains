@@ -65,6 +65,8 @@ public class UtilitiesTests
     [InlineData("", new string[0])]
     [InlineData("!@#$%^&*()", new string[0])]
     [InlineData("can't eat corn", new[] { "can't", "eat", "corn" })]
+    [InlineData("my address is me@me.com", new[] { "my", "address", "is", "me@me.com" })]
+    [InlineData("my-address address is me@me.com", new[] { "my-address", "address", "is", "me@me.com" })]
     public void CleanAndSplitTokenizer_ReturnsExpectedWords(string input, string[] expected)
     {
         var method = typeof(Utilities)
@@ -90,6 +92,8 @@ public class UtilitiesTests
     [InlineData("", new string[0])]
     [InlineData("!@#$%^&*()", new string[0])]
     [InlineData("can't eat corn", new[] { "can't", "eat", "corn" })]
+    [InlineData("my address is me@me.com", new[] { "my", "address", "is", "me@me.com" })]
+    [InlineData("my-address address is me@me.com", new[] { "my-address", "address", "is", "me@me.com" })]
     public void CleanAndSplitTokenizerToList_ReturnsExpectedWords(string input, string[] expected)
     {
         var method = typeof(Utilities)

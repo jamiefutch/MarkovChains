@@ -67,38 +67,51 @@ public static class Utilities
         
         return wordsList;
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static string[] CleanAndSplitTokenizer(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
             return [];
 
-        // Regex pattern explanation:
+        // Enhanced regex pattern:
         // 1. Email: [\w.-]+@[\w.-]+\.[a-zA-Z]{2,}
         // 2. URL: https?://[^\s]+
         // 3. Date (ISO): \d{4}-\d{2}-\d{2}
         // 4. Time: \d{2}:\d{2}(:\d{2})?
-        // 5. Contraction: \b\w+'\w+\b
-        // 6. Words: \b\w+\b
+        // 5. Number with decimal: \b\d+\.\d+\b
+        // 6. Contraction: \b\w+'\w+\b
+        // 7. Hyphenated word: \b\w+(?:-\w+)+\b
+        // 8. Unicode word: \b[\p{L}\p{M}']+\b
+
+        text = text.ToLowerInvariant();
 
         var pattern = @"[\w.-]+@[\w.-]+\.[a-zA-Z]{2,}" + // email
-                      @"|https?://[^\s]+" +             // url
-                      @"|\d{4}-\d{2}-\d{2}" +           // date
-                      @"|\d{2}:\d{2}(:\d{2})?" +        // time
-                      @"|\b\w+'\w+\b" +                 // contraction
-                      @"|\b\w+\b";                      // other words
+                      @"|https?://[^\s]+" + // url
+                      @"|\d{4}-\d{2}-\d{2}" + // date
+                      @"|\d{2}:\d{2}(:\d{2})?" + // time
+                      @"|\b\d+\.\d+\b" + // number with decimal
+                      @"|\b\d+\b" + // whole number
+                      @"|\b[\w_]+\'[\w_]+\b" + // contraction (with _)
+                      @"|\b[\w_]+(?:-[\w_]+)+\b" + // hyphenated word (with _)
+                      @"|\b[\p{L}\p{M}_']+\b"; // unicode word (with _)
 
-        var matches = Regex.Matches(text, pattern);
+
+        var matches = Regex.Matches(text, pattern, RegexOptions.IgnoreCase);
 
         var wordsList = new List<string>();
         foreach (Match match in matches)
         {
             wordsList.Add(match.Value);
         }
+
         return wordsList.ToArray();
     }
     
+
+
+
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static List<string> CleanAndSplitTokenizerToList(string text)
     {
