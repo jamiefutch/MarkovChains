@@ -43,12 +43,12 @@ public class UtilitiesTests
     public void CleanAndSplitToList_ReturnsExpectedWords(string input, string[] expected)
     {
         var method = typeof(Utilities)
-            .GetMethod("CleanAndSplit", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            .GetMethod("CleanAndSplitToList", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
 
         if (method == null)
-            throw new InvalidOperationException("CleanAndSplit method not found.");
+            throw new InvalidOperationException("CleanAndSplitToList method not found.");
 
-        var result = method.Invoke(null, new object[] { input }) as string[];
+        var result = method.Invoke(null, new object[] { input }) as List<string>;
         Assert.Equal(expected, result);
     }
     
