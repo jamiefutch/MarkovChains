@@ -49,7 +49,6 @@ public class MarkovChainSqliteAdvancedTests
                         "They are used in a variety of fields, from physics to finance, and are especially popular in text generation. " +
                         "By analyzing the probability of word sequences, Markov chains can generate new sentences that resemble the original input.";
         
-        var outputText = string.Empty;
         var dbPath = GetTempDbPath();
         try
         {
@@ -58,7 +57,7 @@ public class MarkovChainSqliteAdvancedTests
 
             string? output = null;
             int attempts = 0;
-            // Try up to 5 times to get a valid output
+            // Try up to 500 (sigh) times to get a valid output
             while (attempts < 500)
             {
                 output = markov.Generate(maxWords: 30);
@@ -72,7 +71,6 @@ public class MarkovChainSqliteAdvancedTests
                 }
                 attempts++;
             }
-            outputText = output;
             Assert.False(string.IsNullOrWhiteSpace(output));
             Assert.False(string.IsNullOrWhiteSpace(output));
             Assert.True(output.Split(' ').Length <= 30);
@@ -82,7 +80,6 @@ public class MarkovChainSqliteAdvancedTests
         }
         finally
         {
-            //Debug.Print(outputText);
             if (File.Exists(dbPath)) File.Delete(dbPath);
         }
     }

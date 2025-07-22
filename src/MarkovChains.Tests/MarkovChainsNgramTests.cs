@@ -28,8 +28,6 @@ public class MarkovChainsNgramTests
         var paragraph = "Markov chains are mathematical systems that hop from one state to another. " +
                         "They are used in a variety of fields, from physics to finance, and are especially popular in text generation. " +
                         "By analyzing the probability of word sequences, Markov chains can generate new sentences that resemble the original input.";
-
-        var outputText = string.Empty;
         try
         {
             var markov = new MarkovChainNGram(order: 2, chainCapacity: 100);
@@ -37,7 +35,7 @@ public class MarkovChainsNgramTests
 
             string? output = null;
             int attempts = 0;
-            // Try up to 5 times to get a valid output
+            // Try up to 500 (sigh) times to get a valid output
             while (attempts < 500)
             {
                 output = markov.Generate(maxWords: 30);
@@ -50,9 +48,7 @@ public class MarkovChainsNgramTests
                     break;
                 }
                 attempts++;
-                Debug.Print(attempts.ToString());
             }
-            outputText = output;
             Assert.False(string.IsNullOrWhiteSpace(output));
             Assert.True(output.Split(' ').Length <= 30);
             Assert.Contains("markov", output);
@@ -61,7 +57,6 @@ public class MarkovChainsNgramTests
         }
         catch (Exception ex)
         {
-            Debug.Print(outputText);
             Assert.Fail($"Training and generation failed with exception: {ex.Message}");
         }
     }

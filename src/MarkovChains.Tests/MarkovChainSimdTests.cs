@@ -35,7 +35,7 @@ public class MarkovChainSimdTests
 
             string? output = null;
             int attempts = 0;
-            // Try up to 5 times to get a valid output
+            // Try up to 500 (sigh) times to get a valid output
             while (attempts < 500)
             {
                 output = markov.Generate(maxWords: 30);
