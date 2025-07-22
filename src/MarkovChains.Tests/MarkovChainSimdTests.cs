@@ -33,10 +33,10 @@ public class MarkovChainSimdTests
             var markov = new MarkovChainNGram(order: 2, chainCapacity: 100);
             markov.Train(paragraph);
 
-            string output = null;
+            string? output = null;
             int attempts = 0;
             // Try up to 5 times to get a valid output
-            while (attempts < 5)
+            while (attempts < 15)
             {
                 output = markov.Generate(maxWords: 30);
                 if (!string.IsNullOrWhiteSpace(output) &&

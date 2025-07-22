@@ -38,7 +38,7 @@ public class MarkovChainSimd : IDisposable, IMarkovChain, IMarkovChainFiles
     public void Train(string text)
     {
         // Remove punctuation/symbols, lower case, and split
-        var words = Utilities.CleanAndSplit(text);
+        var words = Utilities.CleanAndSplitTokenizer(text);
         
         if (words.Length < _order)
             return;
