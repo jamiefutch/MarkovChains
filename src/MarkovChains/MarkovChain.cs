@@ -37,7 +37,7 @@ public class MarkovChainNGram : IDisposable, IMarkovChain, IMarkovChainFiles
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Train(string text)
     {
-        var words = Utilities.CleanAndSplitToList(text);
+        var words = Utilities.CleanAndSplitTokenizerToList(text);
         words.Add(_terminator); // End token
 
         StringBuilder s = new StringBuilder();

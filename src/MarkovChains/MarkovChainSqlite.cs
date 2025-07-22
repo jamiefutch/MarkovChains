@@ -72,7 +72,7 @@ public class MarkovChainSqlite : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Train(string text)
     {
-        var words = Utilities.CleanAndSplit(text);
+        var words = Utilities.CleanAndSplitTokenizer(text);
         
         if (words.Length < _order + 1) return;
         var s = new StringBuilder();
@@ -123,7 +123,7 @@ public class MarkovChainSqlite : IDisposable
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public string Generate(string? start = null, int maxWords = 50)
+    public string? Generate(string? start = null, int maxWords = 50)
     {
         var rnd = new Random();
         string? currentGram = start;
