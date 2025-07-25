@@ -12,7 +12,6 @@ public class MarkovChainSqlite : IDisposable
 {
     private readonly int _order;
     private readonly SQLiteConnection _conn;
-    private const int SqlLiteCacheSize = 1_000_000; // Default cache size
 
     /// <summary>
     /// MarkovChainSqlite constructor.
@@ -20,7 +19,8 @@ public class MarkovChainSqlite : IDisposable
     /// <param name="dbPath">path to sqlite db</param>
     /// <param name="order">N-Gram size</param>
     /// <param name="loadIntoMemory">load db into memory?</param>
-    public MarkovChainSqlite(string dbPath, int order, bool loadIntoMemory = false)
+    /// <param name="cacheSize"></param>
+    public MarkovChainSqlite(string dbPath, int order, bool loadIntoMemory = false, int cacheSize = 1_000_000)
     {
         _order = order;
         SQLiteConnection conn;
@@ -46,7 +46,7 @@ public class MarkovChainSqlite : IDisposable
             conn.Open();
             _conn = conn;
 
-            using (var cacheCmd = new SQLiteCommand($"PRAGMA cache_size={SqlLiteCacheSize};", _conn))
+            using (var cacheCmd = new SQLiteCommand($"PRAGMA cache_size={cacheSize};", _conn))
                 cacheCmd.ExecuteNonQuery();
             using (var walCmd = new SQLiteCommand("PRAGMA journal_mode=WAL;", _conn))
                 walCmd.ExecuteNonQuery();
@@ -72,7 +72,15 @@ public class MarkovChainSqlite : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Train(string text)
     {
-        var words = Utilities.CleanAndSplitTokenizer(text);
+        //var words = Utilities.CleanAndSplitTokenizer(text);
+        //var words = Utilities.TokenizeWithSentenceBoundaries(text).SelectMany(x => x).ToArray();
+        
+        // Efficiently flatten sentences into a single array using a pooled list
+        var pooled = new List<string>(text.Length / 4); // rough initial capacity
+        foreach (var sentence in Utilities.TokenizeWithSentenceBoundaries(text))
+            pooled.AddRange(sentence);
+        var words = pooled.ToArray();
+        
         
         if (words.Length < _order + 1) return;
         var s = new StringBuilder();
@@ -113,28 +121,34 @@ public class MarkovChainSqlite : IDisposable
         foreach (var line in lines)
             Train(line);
     }
-
+    
     
     /// <summary>
-    /// generates text using the trained Markov chain.
+    /// Generates text based on the trained Markov chain.
     /// </summary>
-    /// <param name="start"></param>
     /// <param name="maxWords"></param>
     /// <returns></returns>
-    /// <exception cref="InvalidOperationException"></exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public string? Generate(string? start = null, int maxWords = 50)
+    public string? Generate(int maxWords = 50)
     {
         var rnd = new Random();
-        string? currentGram = start;
-        if (string.IsNullOrWhiteSpace(currentGram))
+        string startGram = string.Join(" ", Enumerable.Repeat("<START>", _order));
+
+        // Check if startGram exists
+        using var checkCmd = new SQLiteCommand("SELECT COUNT(*) FROM ngrams WHERE gram = @gram;", _conn);
+        checkCmd.Parameters.AddWithValue("@gram", startGram);
+        long exists = (long)checkCmd.ExecuteScalar();
+
+        string currentGram = startGram;
+        if (exists == 0)
         {
-            using var cmd = new SQLiteCommand("SELECT gram FROM ngrams ORDER BY RANDOM() LIMIT 1;", _conn);
-            currentGram = (string)cmd.ExecuteScalar();
+            // Pick a random gram from the database
+            using var pickCmd = new SQLiteCommand("SELECT gram FROM ngrams ORDER BY RANDOM() LIMIT 1;", _conn);
+            var picked = pickCmd.ExecuteScalar();
+            if (picked == null) return string.Empty;
+            currentGram = (string)picked;
         }
-        
-        if (currentGram == null) throw new InvalidOperationException("The Markov chain is empty.");
-        
+
         var result = new List<string>(currentGram.Split(' '));
         for (int i = 0; i < maxWords - _order; i++)
         {
@@ -145,7 +159,7 @@ public class MarkovChainSqlite : IDisposable
             while (reader.Read())
                 nextWords.Add((reader.GetString(0), reader.GetInt32(1)));
             if (!nextWords.Any()) break;
-            // Weighted random selection
+
             int total = nextWords.Sum(t => t.count);
             int pick = rnd.Next(total);
             int acc = 0;
@@ -159,12 +173,16 @@ public class MarkovChainSqlite : IDisposable
                     break;
                 }
             }
+            if (next == "<END>") break;
             result.Add(next);
-            currentGram = string.Join(" ", result.Skip(result.Count - _order));
+            currentGram = string.Join(" ", result.Skip(Math.Max(0, result.Count - _order)));
         }
-        return string.Join(" ", result);
+        
+        // kinda hacky way to skip the <START> tokens, but it works
+        int skip = 0;
+        while (skip < result.Count && result[skip] == "<START>") skip++;
+        return string.Join(" ", result.Skip(skip));
     }
-    
     
 
     /// <summary>
