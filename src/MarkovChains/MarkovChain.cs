@@ -37,8 +37,14 @@ public class MarkovChainNGram : IDisposable, IMarkovChain, IMarkovChainFiles
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Train(string text)
     {
-        var words = Utilities.CleanAndSplitTokenizerToList(text);
-        words.Add(_terminator); // End token
+        //var words = Utilities.CleanAndSplitTokenizerToList(text);
+        //words.Add(_terminator); // End token
+        // Efficiently flatten sentences into a single array using a pooled list
+        var pooled = new List<string>(text.Length / 4); // rough initial capacity
+        foreach (var sentence in Utilities.TokenizeWithSentenceBoundaries(text))
+            pooled.AddRange(sentence);
+        var words = pooled;
+        
 
         StringBuilder s = new StringBuilder();
         for (int i = 0; i < words.Count - _order; i++)

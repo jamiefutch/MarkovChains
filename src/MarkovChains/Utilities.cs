@@ -108,10 +108,6 @@ public static class Utilities
         return wordsList.ToArray();
     }
     
-
-
-
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static List<string> CleanAndSplitTokenizerToList(string text)
     {
@@ -121,5 +117,33 @@ public static class Utilities
         
         return words.Length > 0 ? words.ToList() : new List<string>();
     }
+    
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static IEnumerable<string[]> TokenizeWithSentenceBoundaries(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            yield break;
+
+        // Simple sentence split (can be improved)
+        var sentences = Regex.Split(text, @"(?<=[.!?])\s+");
+        foreach (var sentence in sentences)
+        {
+            if (string.IsNullOrWhiteSpace(sentence)) continue;
+            var tokens = CleanAndSplitTokenizer(sentence.Trim());
+            if (tokens.Length == 0) continue;
+            // Add special tokens
+            var withBoundaries = new List<string> { "<START>" };
+            withBoundaries.AddRange(tokens);
+            withBoundaries.Add("<END>");
+            yield return withBoundaries.ToArray();
+        }
+    }
+    
+
+
+
+
+    
     
 }
