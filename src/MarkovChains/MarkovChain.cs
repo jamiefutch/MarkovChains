@@ -8,6 +8,7 @@ namespace MarkovChains;
 
 /// <summary>
 /// Markov chain implementation using n-grams.
+/// Not great for large datasets, but works well for smaller ones.
 /// </summary>
 public class MarkovChainNGram : IDisposable, IMarkovChain, IMarkovChainFiles
 {

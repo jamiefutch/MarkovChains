@@ -8,6 +8,7 @@ namespace MarkovChains;
 
 /// <summary>
 /// Simd-based Markov chain implementation.
+/// Not great for large datasets, but works well for smaller ones. 
 /// </summary>
 public class MarkovChainSimd : IDisposable, IMarkovChain, IMarkovChainFiles
 {

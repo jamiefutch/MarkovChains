@@ -102,6 +102,36 @@ public class MarkovChainSqliteAdvancedTests
             if (File.Exists(dbPath)) File.Delete(dbPath);
         }
     }
+    
+    [Fact]
+    public void PruneChain_RemovesLowCountNgrams()
+    {
+        // Arrange
+        var dbPath = "test_prunechain.sqlite";
+        if (File.Exists(dbPath)) File.Delete(dbPath);
+        using var chain = new MarkovChains.MarkovChainSqlite(dbPath, order: 2);
+
+        // Add a frequent n-gram
+        chain.Train("alpha beta gamma");
+        chain.Train("alpha beta gamma");
+        // Add a rare n-gram
+        chain.Train("delta epsilon zeta");
+
+        // Act
+        chain.PruneChain(minCount: 2);
+
+        // Assert: Only the frequent n-gram should remain
+        using var cmd = new System.Data.SQLite.SQLiteCommand("SELECT gram, next FROM ngrams;", 
+            new System.Data.SQLite.SQLiteConnection($"Data Source={dbPath};Version=3;"));
+        cmd.Connection.Open();
+        using var reader = cmd.ExecuteReader();
+        var results = new List<(string, string)>();
+        while (reader.Read())
+            results.Add((reader.GetString(0), reader.GetString(1)));
+        Assert.Contains(results, x => x.Item1.Contains("alpha beta"));
+        Assert.DoesNotContain(results, x => x.Item1.Contains("delta epsilon"));
+    }
+    
 
     [Fact]
     public void Close_DisposesConnection()
