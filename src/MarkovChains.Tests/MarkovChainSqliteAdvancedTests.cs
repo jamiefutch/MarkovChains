@@ -24,7 +24,6 @@ public class MarkovChainSqliteAdvancedTests
             if (File.Exists(dbPath)) File.Delete(dbPath);
         }
     }
-
     
     
     [Fact]
@@ -84,7 +83,7 @@ public class MarkovChainSqliteAdvancedTests
             while (attempts < 500)
             {
                 output = "";
-                output = markov.Generate(5);
+                output = markov.Generate(maxWords:5);
                 if (!string.IsNullOrWhiteSpace(output) &&
                     output.Contains("alpha") &&
                     output.Contains("beta"))

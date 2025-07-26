@@ -8,7 +8,7 @@ namespace MarkovChains;
 /// <summary>
 /// Markov chain implementation using SQLite.
 /// </summary>
-public class MarkovChainSqlite : IDisposable
+public class MarkovChainSqlite : IDisposable, IMarkovChain
 {
     private readonly int _order;
     private readonly SQLiteConnection _conn;
@@ -120,17 +120,17 @@ public class MarkovChainSqlite : IDisposable
             Train(line);
     }
     
-    
+
     /// <summary>
     /// Generates text based on the trained Markov chain.
     /// </summary>
     /// <param name="maxWords"></param>
     /// <returns></returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public string? Generate(int maxWords = 50)
+    public string? Generate(string? start = "<START>", int maxWords = 50)
     {
         var rnd = new Random();
-        string startGram = string.Join(" ", Enumerable.Repeat("<START>", _order));
+        string startGram = string.Join(" ", Enumerable.Repeat(start, _order));
 
         // Check if startGram exists
         using var checkCmd = new SQLiteCommand("SELECT COUNT(*) FROM ngrams WHERE gram = @gram;", _conn);
