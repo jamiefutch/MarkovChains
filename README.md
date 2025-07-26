@@ -126,6 +126,56 @@ Throws ArgumentException if order or capacity is less than 1.
 Throws InvalidOperationException if generating from an empty chain.
 Throws FileNotFoundException if loading from a missing file.
 
+## MarkovChainSqlite
+
+`MarkovChainSqlite` is a C# Markov chain text generator that uses SQLite for persistent, efficient storage and retrieval of n-gram statistics. It supports training, text generation, and pruning of rare n-grams.
+
+### Features
+
+- Trains on text using n-grams of configurable order
+- Stores n-gram statistics in a SQLite database (file or in-memory)
+- Generates text based on learned patterns
+- Prunes rare n-grams to optimize database size
+- Fast, persistent, and easy to use
+
+### Usage
+
+```csharp
+using MarkovChains;
+
+// Create or open a Markov chain database
+using var chain = new MarkovChainSqlite("mydb.sqlite", order: 2);
+
+// Train the chain with text
+chain.Train("This is a sample sentence.");
+chain.Train(new[] { "Another example.", "More data improves results." });
+
+// Generate text
+string output = chain.Generate(maxWords: 20);
+
+// Prune rare n-grams
+chain.PruneChain(minCount: 2);
+
+// Close the chain (optional, handled by Dispose)
+chain.Close();
+```
+
+### Constructor
+
+```csharp
+public MarkovChainSqlite(string dbPath, int order, bool loadIntoMemory = false, int cacheSize = 1_000_000)
+```
+
+- `dbPath`: Path to the SQLite database file.
+- `order`: N-gram size (e.g., 2 for bigrams).
+- `loadIntoMemory`: If true, loads the database into memory for faster access (default: false).
+- `cacheSize`: SQLite cache size (default: 1,000,000).
+
+### Using Pre-Generated Chains
+Specify the exisiting chain in the constructor and the Generate(...).
+
+
+
 ## License
 
 ```
