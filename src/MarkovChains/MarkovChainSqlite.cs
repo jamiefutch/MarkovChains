@@ -81,7 +81,6 @@ public class MarkovChainSqlite : IDisposable
             pooled.AddRange(sentence);
         var words = pooled.ToArray();
         
-        
         if (words.Length < _order + 1) return;
         var s = new StringBuilder();
         
@@ -91,7 +90,7 @@ public class MarkovChainSqlite : IDisposable
         var gramParam = cmd.Parameters.Add("@gram", System.Data.DbType.String);
         var nextParam = cmd.Parameters.Add("@next", System.Data.DbType.String);
         
-        for (int i = 0; i < words.Length - _order; i++)
+        for (var i = 0; i < words.Length - _order; i++)
         {
             s.Clear();
             s.Append(words[i]);
@@ -101,7 +100,6 @@ public class MarkovChainSqlite : IDisposable
                 s.Append(words[i + j]);
             }
             string gram = s.ToString();
-            
             string next = words[i + _order];
             
             gramParam.Value = gram;
@@ -184,7 +182,18 @@ public class MarkovChainSqlite : IDisposable
         return string.Join(" ", result.Skip(skip));
     }
     
-
+    /// <summary>
+    /// Prunes the Markov chain by removing n-grams with a count below the specified minimum.
+    /// </summary>
+    /// <param name="minCount"></param>
+    public void PruneChain(int minCount = 2)
+    {
+        using var pruneCmd = new SQLiteCommand("DELETE FROM ngrams WHERE count < @minCount;", _conn);
+        pruneCmd.Parameters.AddWithValue("@minCount", 2);
+        pruneCmd.ExecuteNonQuery();
+    }
+    
+    
     /// <summary>
     /// Closes the SQLite connection.
     /// </summary>
