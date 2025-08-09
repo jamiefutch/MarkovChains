@@ -127,7 +127,7 @@ public class MarkovChainSqlite : IDisposable, IMarkovChain
     /// <param name="maxWords"></param>
     /// <returns></returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public string? Generate(string? start = "<START>", int maxWords = 50)
+    public string Generate(string? start = "<START>", int maxWords = 50)
     {
         var rnd = new Random();
         string startGram = string.Join(" ", Enumerable.Repeat(start, _order));
