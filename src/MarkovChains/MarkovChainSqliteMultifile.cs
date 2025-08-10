@@ -1,15 +1,16 @@
+using System;
+
+
 namespace MarkovChains;
 
 public class MarkovChainSqliteMultiFile : IDisposable
 {
-    private const string StatusFileName = "status.txt";
+    private const string StatusFileName = "training_status";
     
     private readonly MarkovChainSqlite _markovChain;
     private string? _inputPath;
     private readonly string _searchPattern;
     private string? _statusFilePath;
-    
-
 
     public MarkovChainSqliteMultiFile(string dbPath
         , int order
@@ -24,28 +25,39 @@ public class MarkovChainSqliteMultiFile : IDisposable
         
     }
     
-    public void TrainFromFiles(string? inputPath, string searchPattern = "*.txt", string? statusFilePath = "")
+    public void TrainFromFiles(string? inputPath, 
+        string searchPattern = "*.txt", 
+        string? statusFilePath = "",
+        bool showFileBeingProcessed = false)
     {
         _inputPath = inputPath;
         if (_inputPath != null)
         {
             var lastFilePath = string.Empty;
-            _statusFilePath = Path.Combine(_inputPath, StatusFileName);
+            _statusFilePath = Path.Combine(AppContext.BaseDirectory, StatusFileName);
             
             if(statusFilePath != null)
-                lastFilePath = LoadStatusFile(statusFilePath);        
-            
-            var resumeTraining = false;
+                lastFilePath = LoadStatusFile(statusFilePath);
 
+            var resumeTraining = lastFilePath.Length != 0;
+            
             var files = Directory.GetFiles(_inputPath, searchPattern);
             foreach (var file in files)
             {
                 if (!resumeTraining && file != lastFilePath)
                 {
                     // Skip files until we reach the last processed file
+                    if (showFileBeingProcessed)
+                    {
+                        Console.WriteLine($"{DateTime.Now}\tSkipped file: {file}");
+                    }    
                     continue;
                 }
-
+                
+                if (showFileBeingProcessed)
+                {
+                    Console.WriteLine($"{DateTime.Now}\tProcessing file: {file}");
+                }
                 resumeTraining = true;
                 SaveStatusFile(file);
                 var lines = File.ReadAllLines(file);
