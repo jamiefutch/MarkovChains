@@ -100,7 +100,8 @@ public class MarkovChainSqliteMultiFileTests
             if (File.Exists(file2)) File.Delete(file2);
         }
     }
-
+    
+    
     [Fact]
     public void Constructor_WithInvalidOrder_ThrowsException()
     {

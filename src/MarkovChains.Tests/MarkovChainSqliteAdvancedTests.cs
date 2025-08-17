@@ -131,6 +131,55 @@ public class MarkovChainSqliteAdvancedTests
         Assert.DoesNotContain(results, x => x.Item1.Contains("delta epsilon"));
     }
     
+    
+    [Fact]
+    public void GetNGramsCount_ReturnsCorrectCount()
+    {
+        
+        var testText = new List<string>
+        {
+            "The quick brown fox jumps over the lazy dog.",
+            "Markov chains are useful for generating random text.",
+            "C# is a modern, object-oriented programming language.",
+            "Unit testing helps ensure code reliability.",
+            "Artificial intelligence is transforming technology.",
+            "The rain in Spain stays mainly in the plain.",
+            "To be or not to be, that is the question.",
+            "She sells seashells by the seashore.",
+            "A journey of a thousand miles begins with a single step.",
+            "All that glitters is not gold.",
+            "Practice makes perfect.",
+            "Better late than never.",
+            "Actions speak louder than words.",
+            "Every cloud has a silver lining.",
+            "A picture is worth a thousand words.",
+            "When in Rome, do as the Romans do.",
+            "The pen is mightier than the sword.",
+            "You can't judge a book by its cover.",
+            "Fortune favors the bold.",
+            "Birds of a feather flock together."
+        };
+        
+        
+        var dbPath = GetTempDbPath();
+        var textFile = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(textFile, "a b c a b c");
+            using var markov = new MarkovChainSqlite(dbPath, 2);
+            markov.Train(testText);
+    
+            long count = markov.GetNGramsCount();
+            Assert.True(count > 0);
+        }
+        finally
+        {
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+            if (File.Exists(textFile)) File.Delete(textFile);
+        }
+    }
+
+    
 
     [Fact]
     public void Close_DisposesConnection()

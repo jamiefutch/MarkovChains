@@ -193,6 +193,15 @@ public class MarkovChainSqlite : IDisposable, IMarkovChain
         pruneCmd.ExecuteNonQuery();
     }
     
+    public long GetNGramsCount()
+    {
+        using var pruneCmd = new SQLiteCommand("SELECT COUNT(*) FROM ngrams;", _conn);
+        long count = (long)pruneCmd.ExecuteScalar();
+        return count;
+    }
+    
+    
+    
     
     /// <summary>
     /// Closes the SQLite connection.
