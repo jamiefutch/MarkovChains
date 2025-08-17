@@ -1,4 +1,5 @@
-﻿using System.Data.SQLite;
+﻿using System.Data;
+using System.Data.SQLite;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -11,8 +12,10 @@ namespace MarkovChains;
 public class MarkovChainSqlite : IDisposable, IMarkovChain
 {
     private readonly int _order;
+    private readonly string _dbPath;
     private readonly SQLiteConnection _conn;
     private readonly object _dbLock = new object();
+    private readonly int _parallelThreshold;
 
     /// <summary>
     /// MarkovChainSqlite constructor.
@@ -21,10 +24,17 @@ public class MarkovChainSqlite : IDisposable, IMarkovChain
     /// <param name="order">N-Gram size</param>
     /// <param name="loadIntoMemory">load db into memory?</param>
     /// <param name="cacheSize"></param>
-    public MarkovChainSqlite(string dbPath, int order, bool loadIntoMemory = false, int cacheSize = 1_000_000)
+    /// <param name="parallelThreshold">if the enum count is below this number, it will be processed sequentially</param>
+    public MarkovChainSqlite(string dbPath, 
+        int order, 
+        bool loadIntoMemory = false, 
+        int cacheSize = 1_000_000,
+        int parallelThreshold = 10_000)
     {
         _order = order;
-        SQLiteConnection conn;
+        _dbPath = dbPath;
+        _parallelThreshold = parallelThreshold;
+        SQLiteConnection conn;  
 
         if (loadIntoMemory)
         {
@@ -72,10 +82,7 @@ public class MarkovChainSqlite : IDisposable, IMarkovChain
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Train(string text)
-    {
-        //var words = Utilities.CleanAndSplitTokenizer(text);
-        //var words = Utilities.TokenizeWithSentenceBoundaries(text).SelectMany(x => x).ToArray();
-        
+    {   
         // Efficiently flatten sentences into a single array using a pooled list
         var pooled = new List<string>(text.Length / 4); // rough initial capacity
         foreach (var sentence in Utilities.TokenizeWithSentenceBoundaries(text))
@@ -106,15 +113,69 @@ public class MarkovChainSqlite : IDisposable, IMarkovChain
             gramParam.Value = CleanGram(gram);
             nextParam.Value = CleanGram(next);
             
-            cmd.ExecuteNonQuery();
+            lock (_dbLock)
+            {
+                // Execute the command to insert or update the n-gram
+                cmd.ExecuteNonQuery();
+            }
         }
         tx.Commit();
     }
-    
+
+    /// <summary>
+    /// trains the Markov chain on a single line of text.
+    /// - Works well with ram disks
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void TrainWithConnection(string text)
+    {
+        using var dbConn = new SQLiteConnection($"Data Source={_dbPath};Version=3;Journal Mode=WAL;BusyTimeout=10000;");
+        dbConn.Open();
+        
+        var pooled = new List<string>(text.Length / 4); // rough initial capacity
+        foreach (var sentence in Utilities.TokenizeWithSentenceBoundaries(text))
+            pooled.AddRange(sentence);
+        var words = pooled.ToArray();
+
+        if (words.Length < _order + 1) return;
+        var s = new StringBuilder();
+
+        using var tx = dbConn.BeginTransaction();
+        using var cmd = new SQLiteCommand(@"INSERT INTO ngrams (gram, next, count) VALUES (@gram, @next, 1) ON CONFLICT(gram, next) DO UPDATE SET count = count + 1;", dbConn, tx);
+
+        var gramParam = cmd.Parameters.Add("@gram", System.Data.DbType.String);
+        var nextParam = cmd.Parameters.Add("@next", System.Data.DbType.String);
+
+        for (var i = 0; i < words.Length - _order; i++)
+        {
+            s.Clear();
+            s.Append(words[i]);
+            for (int j = 1; j < _order; j++)
+            {
+                s.Append(' ');
+                s.Append(words[i + j]);
+            }
+            string gram = s.ToString();
+            string next = words[i + _order];
+
+            gramParam.Value = CleanGram(gram);
+            nextParam.Value = CleanGram(next);
+
+            lock (_dbLock)
+            {
+                // Execute the command to insert or update the n-gram
+                cmd.ExecuteNonQuery();
+            }
+        }
+        tx.Commit();
+        dbConn.Close();
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private string CleanGram(string txt)
     {
         // Remove <START> and <END> tokens from the gram
+        // hacky, but it works
         var tmp = txt.Trim();
         tmp = tmp.Replace("<END>", "").Trim();
         tmp = tmp.Replace("<START>", "").Trim();
@@ -129,14 +190,32 @@ public class MarkovChainSqlite : IDisposable, IMarkovChain
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Train(IEnumerable<string> lines)
     {
-        foreach (var line in lines)
-            Train(line);
+        IEnumerable<string> linesEenum = lines as string[] ?? lines.ToArray();
+        if(!linesEenum.Any())
+            return;
+
+        // if line count is below threshold, train sequentially
+        if (linesEenum.Count() < _parallelThreshold)
+        {
+            foreach (var line in linesEenum)
+                Train(line);
+
+            return;
+        }
+        
+        // else train in parallel
+        Parallel.ForEach(linesEenum, line =>
+        {
+            //int threadId = Thread.CurrentThread.ManagedThreadId;
+            //$"Thread: {threadId};".Print();
+            TrainWithConnection(line);
+        });
     }
-    
 
     /// <summary>
     /// Generates text based on the trained Markov chain.
     /// </summary>
+    /// <param name="start">word that denotes the start of a gram</param>
     /// <param name="maxWords"></param>
     /// <returns></returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -192,8 +271,9 @@ public class MarkovChainSqlite : IDisposable, IMarkovChain
         // kinda hacky way to skip the <START> tokens, but it works
         int skip = 0;
         while (skip < result.Count && result[skip] == "<START>") skip++;
-        var retval = CleanGram(string.Join(" ", result.Skip(skip)));
-        return retval;
+        
+        var eval = CleanGram(string.Join(" ", result.Skip(skip)));
+        return eval;
     }
     
     /// <summary>

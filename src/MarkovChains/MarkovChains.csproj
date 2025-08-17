@@ -15,8 +15,9 @@
         <RepositoryUrl>https://github.com/jamiefutch/MarkovChains</RepositoryUrl>
         <RepositoryType>Git</RepositoryType>        
         <PackageTags>C#, MarkovChains</PackageTags>
-        <Version>1.0.34</Version>
-        <AssemblyName>MarkovChains</AssemblyName>        
+        <Version>1.0.39</Version>
+        <AssemblyName>MarkovChains</AssemblyName>
+        <OutputType>Library</OutputType>        
     </PropertyGroup>
 
     <ItemGroup>
