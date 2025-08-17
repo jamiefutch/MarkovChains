@@ -184,7 +184,7 @@ public class MarkovChainSqlite : IDisposable, IMarkovChain
                     break;
                 }
             }
-            if (next == "<END>") break;
+            //if (next == "<END>") break;
             result.Add(next);
             currentGram = string.Join(" ", result.Skip(Math.Max(0, result.Count - _order)));
         }
