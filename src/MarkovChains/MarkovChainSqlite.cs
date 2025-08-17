@@ -12,6 +12,7 @@ public class MarkovChainSqlite : IDisposable, IMarkovChain
 {
     private readonly int _order;
     private readonly SQLiteConnection _conn;
+    private readonly object _dbLock = new object();
 
     /// <summary>
     /// MarkovChainSqlite constructor.
@@ -28,7 +29,7 @@ public class MarkovChainSqlite : IDisposable, IMarkovChain
         if (loadIntoMemory)
         {
             // Open file DB
-            using var fileConn = new SQLiteConnection($"Data Source={dbPath};Version=3;");
+            using var fileConn = new SQLiteConnection($"Data Source={dbPath};Version=3;Journal Mode=WAL;BusyTimeout=10000;");
             fileConn.Open();
 
             // Open memory DB
@@ -101,12 +102,24 @@ public class MarkovChainSqlite : IDisposable, IMarkovChain
             }
             string gram = s.ToString();
             string next = words[i + _order];
+
+            gramParam.Value = CleanGram(gram);
+            nextParam.Value = CleanGram(next);
             
-            gramParam.Value = gram;
-            nextParam.Value = next;
             cmd.ExecuteNonQuery();
         }
         tx.Commit();
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private string CleanGram(string txt)
+    {
+        // Remove <START> and <END> tokens from the gram
+        var tmp = txt.Trim();
+        tmp = tmp.Replace("<END>", "").Trim();
+        tmp = tmp.Replace("<START>", "").Trim();
+        tmp = Regex.Replace(tmp, @"\s+", " "); // collapse multiple spaces
+        return tmp.Trim();
     }
 
     
@@ -179,7 +192,8 @@ public class MarkovChainSqlite : IDisposable, IMarkovChain
         // kinda hacky way to skip the <START> tokens, but it works
         int skip = 0;
         while (skip < result.Count && result[skip] == "<START>") skip++;
-        return string.Join(" ", result.Skip(skip));
+        var retval = CleanGram(string.Join(" ", result.Skip(skip)));
+        return retval;
     }
     
     /// <summary>
@@ -189,7 +203,7 @@ public class MarkovChainSqlite : IDisposable, IMarkovChain
     public void PruneChain(int minCount = 2)
     {
         using var pruneCmd = new SQLiteCommand("DELETE FROM ngrams WHERE count < @minCount;", _conn);
-        pruneCmd.Parameters.AddWithValue("@minCount", 2);
+        pruneCmd.Parameters.AddWithValue("@minCount", minCount);
         pruneCmd.ExecuteNonQuery();
     }
     
@@ -199,9 +213,6 @@ public class MarkovChainSqlite : IDisposable, IMarkovChain
         long count = (long)pruneCmd.ExecuteScalar();
         return count;
     }
-    
-    
-    
     
     /// <summary>
     /// Closes the SQLite connection.

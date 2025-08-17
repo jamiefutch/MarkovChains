@@ -103,6 +103,40 @@ public class MarkovChainSqliteMultiFileTests
     
     
     [Fact]
+    public void ParallelTrainFromFiles_TrainsOnMultipleFiles()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".sqlite");
+        var tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        Directory.CreateDirectory(tempDir);
+
+        var file1 = Path.Combine(tempDir, "file1.txt");
+        var file2 = Path.Combine(tempDir, "file2.txt");
+        File.WriteAllText(file1, "first file content");
+        File.WriteAllText(file2, "second file content");
+
+        try
+        {
+            using var markov = new MarkovChainSqliteMultiFile(dbPath, 2);
+            markov.ParallelTrainFromFiles(tempDir);
+
+            // No exception means success; optionally, check status file exists
+            var statusFile = Path.Combine(AppContext.BaseDirectory, "training_status");
+            Assert.True(File.Exists(statusFile));
+        }
+        finally
+        {
+            if (File.Exists(dbPath)) File.Delete(dbPath);
+            if (File.Exists(file1)) File.Delete(file1);
+            if (File.Exists(file2)) File.Delete(file2);
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir);
+            var statusFile = Path.Combine(AppContext.BaseDirectory, "training_status");
+            if (File.Exists(statusFile)) File.Delete(statusFile);
+        }
+    }
+
+    
+    
+    [Fact]
     public void Constructor_WithInvalidOrder_ThrowsException()
     {
         var dbPath = GetTempDbPath();
